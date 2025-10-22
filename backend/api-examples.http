@@ -1,0 +1,157 @@
+###
+# LiteRinth API - Примеры запросов
+# Используйте с VS Code REST Client или аналогичными инструментами
+###
+
+@baseUrl = http://localhost:4000
+@token = YOUR_TOKEN_HERE
+
+### ============================================
+### АВТОРИЗАЦИЯ
+### ============================================
+
+### Регистрация нового пользователя
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "newuser@example.com",
+  "username": "newuser",
+  "password": "password123",
+  "name": "New User"
+}
+
+### Вход (получение токена)
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "alexey@literinth.com",
+  "password": "password123"
+}
+
+### Получить данные текущего пользователя
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
+
+### Выход
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "token": "{{token}}"
+}
+
+### ============================================
+### КАТЕГОРИИ
+### ============================================
+
+### Получить все категории
+GET {{baseUrl}}/categories
+
+### Получить категорию по slug
+GET {{baseUrl}}/categories/shitpost
+
+### Получить категорию "hostile-mobs"
+GET {{baseUrl}}/categories/hostile-mobs
+
+### ============================================
+### СХЕМАТИКИ
+### ============================================
+
+### Получить все схематики (с пагинацией)
+GET {{baseUrl}}/schematics?page=1&perPage=10
+
+### Получить схематики с сортировкой по популярности
+GET {{baseUrl}}/schematics?sort=popular&perPage=20
+
+### Получить схематики с сортировкой по загрузкам
+GET {{baseUrl}}/schematics?sort=downloads
+
+### Получить схематики с сортировкой по лайкам
+GET {{baseUrl}}/schematics?sort=likes
+
+### Получить схематики по категории
+GET {{baseUrl}}/schematics?category=shitpost
+
+### Получить схематики по подкатегории
+GET {{baseUrl}}/schematics?category=shitpost&subcategory=shitpost-archive
+
+### Поиск схематиков
+GET {{baseUrl}}/schematics?search=furnace&page=1&perPage=10
+
+### Получить схематики конкретного автора
+GET {{baseUrl}}/schematics?authorId=USER_ID_HERE
+
+### Получить один схематик по ID
+GET {{baseUrl}}/schematics/SCHEMATIC_ID_HERE
+
+### Получить схематик по slug
+GET {{baseUrl}}/schematics/furnace-inferno-11000
+
+### Создать новый схематик (требуется авторизация)
+POST {{baseUrl}}/schematics
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Новый крутой схематик",
+  "description": "Описание моего схематика",
+  "content": "Полное описание с инструкциями...",
+  "imageUrl": "https://example.com/image.png",
+  "fileUrl": "https://example.com/schematic.litematic",
+  "categoryId": "CATEGORY_ID_HERE",
+  "subcategoryId": "SUBCATEGORY_ID_HERE",
+  "tags": ["редстоун", "автоматика", "эффективно"]
+}
+
+### Лайкнуть схематик (требуется авторизация)
+POST {{baseUrl}}/schematics/SCHEMATIC_ID_HERE/like
+Authorization: Bearer {{token}}
+
+### Скачать схематик (инкрементирует счетчик)
+POST {{baseUrl}}/schematics/SCHEMATIC_ID_HERE/download
+
+### ============================================
+### КОМПЛЕКСНЫЕ ЗАПРОСЫ
+### ============================================
+
+### Получить топ-10 самых скачиваемых схематиков
+GET {{baseUrl}}/schematics?sort=downloads&perPage=10&page=1
+
+### Получить последние 20 схематиков
+GET {{baseUrl}}/schematics?sort=recent&perPage=20
+
+### Поиск по категории "agriculture" с сортировкой по лайкам
+GET {{baseUrl}}/schematics?category=agriculture&sort=likes
+
+### Схематики категории "item-processing" подкатегории "sorters"
+GET {{baseUrl}}/schematics?category=item-processing&subcategory=sorters
+
+### Поиск "ферма" с популярными результатами
+GET {{baseUrl}}/schematics?search=ферма&sort=popular
+
+### ============================================
+### ПРИМЕЧАНИЯ
+### ============================================
+
+# 1. Замените {{token}} на реальный токен после входа
+# 2. Замените SCHEMATIC_ID_HERE, CATEGORY_ID_HERE на реальные ID
+# 3. Для получения токена выполните запрос /auth/login
+# 4. Токен действителен 7 дней
+# 5. Все эндпоинты с auth: true требуют заголовок Authorization
+
+### ============================================
+### ТЕСТОВЫЕ ДАННЫЕ
+### ============================================
+
+# Тестовые пользователи (после seed):
+# Email: alexey@literinth.com | Password: password123
+# Email: ivan@literinth.com | Password: password123
+
+# Категории: hostile-mobs, neutral-mobs, passive-mobs, agriculture, 
+#            blocks-items, item-processing, infrastructure, shitpost
+
+# Подкатегории shitpost: shitpost-archive, trash

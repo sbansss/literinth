@@ -1,0 +1,140 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  name      String?
+  avatar    String?
+  bio       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Связи
+  schematics Schematic[]
+  likes      SchematicLike[]
+  sessions   Session[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Category {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  description   String?
+  icon          String?
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  subcategories Subcategory[]
+  schematics    Schematic[]
+
+  @@map("categories")
+}
+
+model Subcategory {
+  id          String   @id @default(cuid())
+  categoryId  String
+  name        String
+  slug        String
+  description String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category   Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  schematics Schematic[]
+
+  @@unique([categoryId, slug])
+  @@map("subcategories")
+}
+
+model Schematic {
+  id            String   @id @default(cuid())
+  title         String
+  slug          String   @unique
+  description   String
+  content       String?  @db.Text
+  imageUrl      String?
+  fileUrl       String?
+  authorId      String
+  categoryId    String
+  subcategoryId String?
+  downloads     Int      @default(0)
+  views         Int      @default(0)
+  published     Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Связи
+  author       User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category     Category        @relation(fields: [categoryId], references: [id])
+  subcategory  Subcategory?    @relation(fields: [subcategoryId], references: [id])
+  tags         SchematicTag[]
+  likes        SchematicLike[]
+
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([subcategoryId])
+  @@index([createdAt])
+  @@index([downloads])
+  @@map("schematics")
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  schematics SchematicTag[]
+
+  @@map("tags")
+}
+
+model SchematicTag {
+  schematicId String
+  tagId       String
+  createdAt   DateTime @default(now())
+
+  schematic Schematic @relation(fields: [schematicId], references: [id], onDelete: Cascade)
+  tag       Tag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([schematicId, tagId])
+  @@map("schematic_tags")
+}
+
+model SchematicLike {
+  id          String   @id @default(cuid())
+  userId      String
+  schematicId String
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schematic Schematic @relation(fields: [schematicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, schematicId])
+  @@map("schematic_likes")
+}
