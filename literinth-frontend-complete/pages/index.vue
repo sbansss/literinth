@@ -115,6 +115,8 @@
 
 <script setup lang="ts">
 import type { Schematic, Category } from '~/types'
+export type SortOption = 'popular' | 'recent' | 'downloads' | 'likes'
+
 
 const api = useApi()
 const route = useRoute()
@@ -127,8 +129,8 @@ const loading = ref(true)
 const error = ref('')
 
 const searchQuery = ref('')
-const sortBy = ref('popular')
-const perPage = ref(12)
+const sortBy = ref<SortOption>('popular')
+const perPage = ref(10)
 const viewMode = ref<'grid' | 'list'>('grid')
 const currentPage = ref(1)
 const selectedCategory = ref<string | null>(null)

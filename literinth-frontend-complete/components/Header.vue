@@ -1,7 +1,7 @@
 <template>
   <header class="bg-dark-card border-b border-dark-border sticky top-0 z-50">
     <div class="container mx-auto px-4">
-      <div class="flex items-center justify-between h-16">
+      <div class="flex  items-center font-onest justify-between h-16">
         <!-- Лого -->
         <NuxtLink to="/" class="text-2xl font-bold text-white hover:text-primary transition-colors font-display">
           LiteRinth
@@ -14,7 +14,7 @@
             class="flex items-center gap-2 text-gray-300 hover:text-white transition-colors"
           >
             <Icon name="heroicons:wrench-screwdriver" class="w-5 h-5" />
-            <span>Схематики</span>
+            <p class="antialiased">Схематики</p>
           </NuxtLink>
           
           <NuxtLink 
