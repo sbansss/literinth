@@ -36,9 +36,13 @@
         </nav>
 
         <!-- Кнопка входа -->
+          <NuxtLink to="/login">
         <button class="btn-primary">
+          
           Войти
+         
         </button>
+        </NuxtLink>
       </div>
     </div>
   </header>

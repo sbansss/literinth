@@ -19,7 +19,7 @@
           {{ schematic.title }}
         </h3>
         <p class="text-gray-400 text-sm">
-          Сделал: {{ schematic.author }}
+          Сделал: {{ schematic.author?.name }}
         </p>
       </div>
 

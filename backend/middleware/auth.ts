@@ -1,5 +1,5 @@
 import { APIError, Gateway } from "encore.dev/api";
-import { auth, type Session } from "./auth/auth";
+import { auth, type Session } from "../auth/auth";
 
 interface AuthData {
   user: Session["user"];

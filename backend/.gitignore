@@ -33,3 +33,7 @@ Thumbs.db
 
 # Prisma
 prisma/migrations/
+encore.gen.go
+encore.gen.cue
+/.encore
+/encore.gen
