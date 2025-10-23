@@ -58,7 +58,8 @@ export const useApi = () => {
     return fetchAPI(`/schematics/${id}`)
   }
 
-  const createSchematic = async (data: {
+const createSchematic = async (
+  data: FormData | {
     title: string
     description: string
     categoryId: string
@@ -66,12 +67,13 @@ export const useApi = () => {
     imageUrl?: string
     fileUrl?: string
     tags?: string[]
-  }): Promise<{ success: boolean; schematic: Schematic }> => {
-    return fetchAPI('/schematics', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    })
   }
+): Promise<{ success: boolean; schematic: Schematic }> => {
+  return fetchAPI('/schematics', {
+    method: 'POST',
+    body: data instanceof FormData ? data : JSON.stringify(data),
+  })
+}
 
   const downloadSchematic = async (id: string): Promise<{ success: boolean; fileUrl: string }> => {
     return fetchAPI(`/schematics/${id}/download`, { method: 'POST' })
