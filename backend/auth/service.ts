@@ -48,6 +48,12 @@ interface LogoutResponse {
   message: string;
 }
 
+interface MeRequest {
+  headers: {
+    authorization?: string;
+  };
+}
+
 interface MeResponse {
   id: string;
   email: string;
@@ -170,13 +176,21 @@ export const login = api(
  * Выход пользователя
  */
 export const logout = api(
-  { expose: true, method: "POST", path: "/auth/logout", auth: true },
+  { expose: true, method: "POST", path: "/auth/logout" },
   async (req: LogoutRequest): Promise<LogoutResponse> => {
-    await auth.api.signOut({
-      headers: {
-        authorization: `Bearer ${req.token}`,
-      },
-    });
+    if (!req.token) {
+      throw APIError.invalidArgument("Token обязателен");
+    }
+
+    try {
+      await auth.api.signOut({
+        headers: {
+          authorization: `Bearer ${req.token}`,
+        },
+      });
+    } catch (error) {
+      // Игнорируем ошибки при выходе - токен может быть уже невалидным
+    }
 
     return {
       success: true,
@@ -187,33 +201,56 @@ export const logout = api(
 
 /**
  * Получение данных текущего пользователя
+ * ИСПРАВЛЕНО: теперь правильно получает токен из заголовков
  */
 export const me = api(
-  { expose: true, method: "GET", path: "/auth/me", auth: true },
-  async (): Promise<MeResponse> => {
-    const session = await auth.api.getSession();
-
-    if (!session) {
-      throw APIError.unauthenticated("Не авторизован");
+  { expose: true, method: "GET", path: "/auth/me" },
+  async (req: MeRequest): Promise<MeResponse> => {
+    // Получаем токен из заголовка
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      throw APIError.unauthenticated("Требуется авторизация");
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        name: true,
-        avatar: true,
-        bio: true,
-        createdAt: true,
-      },
-    });
+    const token = authHeader.substring(7);
 
-    if (!user) {
-      throw APIError.notFound("Пользователь не найден");
+    // Получаем сессию через Better Auth
+    try {
+      const session = await auth.api.getSession({
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!session || !session.user) {
+        throw APIError.unauthenticated("Недействительная сессия");
+      }
+
+      // Получаем полные данные пользователя
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          name: true,
+          avatar: true,
+          bio: true,
+          createdAt: true,
+        },
+      });
+
+      if (!user) {
+        throw APIError.notFound("Пользователь не найден");
+      }
+
+      return user;
+    } catch (error) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw APIError.unauthenticated("Ошибка авторизации");
     }
-
-    return user;
   }
 );

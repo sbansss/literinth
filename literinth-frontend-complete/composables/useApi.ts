@@ -20,12 +20,12 @@ export const useApi = () => {
     const response = await fetch(`${baseURL}${endpoint}`, {
       ...options,
       headers,
-      credentials: 'include', // Для работы с cookies
+      credentials: 'include',
     })
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Ошибка сервера' }))
-      throw new Error(error.message || 'Ошибка API')
+      throw new Error(error.message || `HTTP error ${response.status}`)
     }
 
     return response.json()
@@ -58,29 +58,24 @@ export const useApi = () => {
     return fetchAPI(`/schematics/${id}`)
   }
 
-const createSchematic = async (
-  data: FormData | {
-    title: string
-    description: string
-    categoryId: string
-    subcategoryId?: string
-    imageUrl?: string
-    fileUrl?: string
-    tags?: string[]
-  }
-): Promise<{ success: boolean; schematic: Schematic }> => {
+const createSchematic = async (data: FormData): Promise<{ schematic: Schematic }> => {
   return fetchAPI('/schematics', {
     method: 'POST',
-    body: data instanceof FormData ? data : JSON.stringify(data),
+    body: data,
   })
 }
 
+
   const downloadSchematic = async (id: string): Promise<{ success: boolean; fileUrl: string }> => {
-    return fetchAPI(`/schematics/${id}/download`, { method: 'POST' })
+    return fetchAPI(`/schematics/${id}/download`, { 
+      method: 'POST' 
+    })
   }
 
   const likeSchematic = async (id: string): Promise<{ success: boolean; liked: boolean; likes: number }> => {
-    return fetchAPI(`/schematics/${id}/like`, { method: 'POST' })
+    return fetchAPI(`/schematics/${id}/like`, { 
+      method: 'POST' 
+    })
   }
 
   // ============ КАТЕГОРИИ ============
@@ -94,6 +89,7 @@ const createSchematic = async (
   }
 
   // ============ АВТОРИЗАЦИЯ ============
+  // ИСПРАВЛЕНО: правильная обработка ответов API
   
   const register = async (data: {
     email: string
@@ -106,17 +102,21 @@ const createSchematic = async (
       body: JSON.stringify(data),
     })
     
-    if (result.user && process.client) {
-      // Сохраняем токен если он есть
-      if (result.token) {
-        localStorage.setItem('authToken', result.token)
-      }
+    // Преобразуем ответ backend в User
+    const user: User = {
+      id: result.user.id,
+      username: result.user.username,
+      name: result.user.name || result.user.username,
+      email: result.user.email,
+      image: result.user.avatar || null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
     
     return {
       success: true,
-      data: result.user,
-      message: 'Регистрация успешна'
+      data: user,
+      message: result.message || 'Регистрация успешна'
     }
   }
 
@@ -129,22 +129,43 @@ const createSchematic = async (
       body: JSON.stringify(data),
     })
     
-    if (result.user && process.client) {
-      // Сохраняем токен если он есть
-      if (result.token) {
-        localStorage.setItem('authToken', result.token)
-      }
+    // Сохраняем токен
+    if (result.token && process.client) {
+      localStorage.setItem('authToken', result.token)
+    }
+    
+    // Преобразуем ответ backend в User
+    const user: User = {
+      id: result.user.id,
+      username: result.user.username,
+      name: result.user.name || result.user.username,
+      email: result.user.email,
+      image: result.user.avatar || null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
     
     return {
       success: true,
-      data: result.user,
-      message: 'Вход выполнен успешно'
+      data: user,
+      message: result.message || 'Вход выполнен успешно'
     }
   }
 
   const logout = async (): Promise<ApiResponse<null>> => {
-    await fetchAPI('/auth/logout', { method: 'POST' })
+    const token = process.client ? localStorage.getItem('authToken') : null
+    
+    if (token) {
+      try {
+        await fetchAPI('/auth/logout', { 
+          method: 'POST',
+          body: JSON.stringify({ token }),
+        })
+      } catch (error) {
+        // Игнорируем ошибки при выходе
+        console.error('Ошибка при выходе:', error)
+      }
+    }
     
     if (process.client) {
       localStorage.removeItem('authToken')
@@ -157,14 +178,35 @@ const createSchematic = async (
     }
   }
 
+  // ИСПРАВЛЕНО: getCurrentUser теперь правильно получает данные пользователя
   const getCurrentUser = async (): Promise<User | null> => {
     try {
-      const result = await fetchAPI<{ user: User }>('/auth/me')
-      return result.user
+      // Проверяем наличие токена
+      const token = process.client ? localStorage.getItem('authToken') : null
+      
+      if (!token) {
+        return null
+      }
+
+      // Делаем запрос с токеном в заголовке
+      const response = await fetchAPI<MeResponse>('/auth/me')
+      
+      // Преобразуем MeResponse в User (avatar -> image, добавляем updatedAt)
+      return {
+        id: response.id,
+        username: response.username,
+        name: response.name || response.username,
+        email: response.email,
+        image: response.avatar, // avatar из backend -> image для frontend
+        createdAt: response.createdAt,
+        updatedAt: response.createdAt, // Используем createdAt как updatedAt
+      }
     } catch (error) {
+      // Если токен невалиден, удаляем его
       if (process.client) {
         localStorage.removeItem('authToken')
       }
+      console.error('Ошибка получения пользователя:', error)
       return null
     }
   }
@@ -187,4 +229,15 @@ const createSchematic = async (
     logout,
     getCurrentUser,
   }
+}
+
+// Тип для ответа /auth/me
+interface MeResponse {
+  id: string
+  email: string
+  username: string
+  name: string | null
+  avatar: string | null
+  bio: string | null
+  createdAt: string
 }
