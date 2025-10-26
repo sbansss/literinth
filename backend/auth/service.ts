@@ -1,7 +1,6 @@
 import { api, APIError } from "encore.dev/api";
 import { auth } from "../auth/auth";
 import { prisma } from "../db";
-import bcrypt from "bcrypt";
 
 interface RegisterRequest {
   email: string;
@@ -48,29 +47,12 @@ interface LogoutResponse {
   message: string;
 }
 
-interface MeRequest {
-  headers: {
-    authorization?: string;
-  };
-}
-
-interface MeResponse {
-  id: string;
-  email: string;
-  username: string;
-  name: string | null;
-  avatar: string | null;
-  bio: string | null;
-  createdAt: Date;
-}
-
 /**
  * Регистрация нового пользователя
  */
 export const register = api(
   { expose: true, method: "POST", path: "/auth/register" },
   async (req: RegisterRequest): Promise<RegisterResponse> => {
-    // Валидация
     if (!req.email || !req.username || !req.password) {
       throw APIError.invalidArgument("Email, username и password обязательны");
     }
@@ -92,30 +74,36 @@ export const register = api(
       );
     }
 
-    // Хеширование пароля
-    const hashedPassword = await bcrypt.hash(req.password, 10);
+    // Регистрация через Better Auth
+    try {
+      const result = await auth.api.signUpEmail({
+        body: {
+          email: req.email,
+          password: req.password,
+          name: req.name || req.username,
+        },
+      });
 
-    // Создание пользователя
-    const user = await prisma.user.create({
-      data: {
-        email: req.email,
-        username: req.username,
-        password: hashedPassword,
-        name: req.name,
-      },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        name: true,
-      },
-    });
+      // Обновляем username (Better Auth не знает про него)
+      const user = await prisma.user.update({
+        where: { id: result.user.id },
+        data: { username: req.username },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          name: true,
+        },
+      });
 
-    return {
-      success: true,
-      message: "Пользователь успешно зарегистрирован",
-      user,
-    };
+      return {
+        success: true,
+        message: "Пользователь успешно зарегистрирован",
+        user,
+      };
+    } catch (error) {
+      throw APIError.internal("Ошибка регистрации: " + error);
+    }
   }
 );
 
@@ -129,46 +117,40 @@ export const login = api(
       throw APIError.invalidArgument("Email и password обязательны");
     }
 
-    // Поиск пользователя
-    const user = await prisma.user.findUnique({
-      where: { email: req.email },
-    });
+    try {
+      // Вход через Better Auth
+      const result = await auth.api.signInEmail({
+        body: {
+          email: req.email,
+          password: req.password,
+        },
+      });
 
-    if (!user) {
+      if (!result || !result.user) {
+        throw APIError.unauthenticated("Неверный email или пароль");
+      }
+
+      // Получаем username
+      const user = await prisma.user.findUnique({
+        where: { id: result.user.id },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          name: true,
+          avatar: true,
+        },
+      });
+
+      return {
+        success: true,
+        message: "Вход выполнен успешно",
+        token: result.token!,
+        user: user!,
+      };
+    } catch (error) {
       throw APIError.unauthenticated("Неверный email или пароль");
     }
-
-    // Проверка пароля
-    const validPassword = await bcrypt.compare(req.password, user.password);
-
-    if (!validPassword) {
-      throw APIError.unauthenticated("Неверный email или пароль");
-    }
-
-    // Создание сессии через Better Auth
-    const session = await auth.api.signInEmail({
-      body: {
-        email: req.email,
-        password: req.password,
-      },
-    });
-
-    if (!session) {
-      throw APIError.internal("Ошибка создания сессии");
-    }
-
-    return {
-      success: true,
-      message: "Вход выполнен успешно",
-      token: session.token,
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        name: user.name,
-        avatar: user.avatar,
-      },
-    };
   }
 );
 
@@ -188,69 +170,13 @@ export const logout = api(
           authorization: `Bearer ${req.token}`,
         },
       });
+
+      return {
+        success: true,
+        message: "Выход выполнен успешно",
+      };
     } catch (error) {
-      // Игнорируем ошибки при выходе - токен может быть уже невалидным
-    }
-
-    return {
-      success: true,
-      message: "Выход выполнен успешно",
-    };
-  }
-);
-
-/**
- * Получение данных текущего пользователя
- * ИСПРАВЛЕНО: теперь правильно получает токен из заголовков
- */
-export const me = api(
-  { expose: true, method: "GET", path: "/auth/me" },
-  async (req: MeRequest): Promise<MeResponse> => {
-    // Получаем токен из заголовка
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      throw APIError.unauthenticated("Требуется авторизация");
-    }
-
-    const token = authHeader.substring(7);
-
-    // Получаем сессию через Better Auth
-    try {
-      const session = await auth.api.getSession({
-        headers: {
-          authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!session || !session.user) {
-        throw APIError.unauthenticated("Недействительная сессия");
-      }
-
-      // Получаем полные данные пользователя
-      const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: {
-          id: true,
-          email: true,
-          username: true,
-          name: true,
-          avatar: true,
-          bio: true,
-          createdAt: true,
-        },
-      });
-
-      if (!user) {
-        throw APIError.notFound("Пользователь не найден");
-      }
-
-      return user;
-    } catch (error) {
-      if (error instanceof APIError) {
-        throw error;
-      }
-      throw APIError.unauthenticated("Ошибка авторизации");
+      throw APIError.internal("Ошибка при выходе");
     }
   }
 );

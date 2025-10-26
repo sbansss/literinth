@@ -262,7 +262,7 @@ const loadMySchematics = async () => {
     // TODO: добавить endpoint для схематиков юзера
     const response = await api.getSchematics({ perPage: 100 })
     // Фильтруем по автору (временно)
-    mySchematics.value = response.data.filter(s => s.author.id === auth.user.value?.id)
+    mySchematics.value = response.data.filter((s: any) => s.author.id === auth.user.value?.id)
   } catch (e) {
     console.error('Ошибка:', e)
   } finally {

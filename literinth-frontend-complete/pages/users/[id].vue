@@ -206,13 +206,19 @@ const loadUser = async () => {
     const userId = route.params.id as string
     
     // Находим схематики пользователя
-    userSchematics.value = response.data.filter(s => s.author.id === userId)
+    userSchematics.value = response.data.filter((s: any) => s.author.id === userId)
     
-    if (userSchematics.value.length > 0) {
-      user.value = userSchematics.value[0].author
-    } else {
-      error.value = 'Пользователь не найден'
-    }
+if (userSchematics.value.length > 0) {
+  const author = userSchematics.value[0].author
+  user.value = {
+    id: author.id,
+    name: author.name,
+    username: author.username,
+    image: author.image ?? null
+  }
+} else {
+  error.value = 'Пользователь не найден'
+}
   } catch (e: any) {
     error.value = e.message || 'Ошибка загрузки профиля'
   } finally {

@@ -1,172 +1,389 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcrypt";
+import { hashSync } from "bcrypt";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Начинаем заполнение БД...");
+  console.log("🌱 Начинаем заполнение БД с i18n...");
 
   // Очистка существующих данных
   console.log("🗑️  Очистка существующих данных...");
   await prisma.schematicLike.deleteMany();
   await prisma.schematicTag.deleteMany();
+  await prisma.tagTranslation.deleteMany();
   await prisma.tag.deleteMany();
+  await prisma.schematicTranslation.deleteMany();
   await prisma.schematic.deleteMany();
+  await prisma.subcategoryTranslation.deleteMany();
   await prisma.subcategory.deleteMany();
+  await prisma.categoryTranslation.deleteMany();
   await prisma.category.deleteMany();
   await prisma.session.deleteMany();
+  await prisma.account.deleteMany();
   await prisma.user.deleteMany();
 
-  // Создание тестовых пользователей
+  // Создание тестовых пользователей напрямую через Prisma
   console.log("👤 Создание пользователей...");
-  const hashedPassword = await bcrypt.hash("password123", 10);
 
+  // Админ
+  const admin = await prisma.user.create({
+    data: {
+      email: "admin@literinth.com",
+      password: hashSync("password123", 10),
+      name: "Admin User",
+      username: "admin",
+      bio: "Администратор платформы",
+      role: "ADMIN",
+    },
+  });
+
+  // Юзер 1
   const user1 = await prisma.user.create({
     data: {
       email: "alexey@literinth.com",
-      username: "alexey_kuzmichev",
-      password: hashedPassword,
+      password: hashSync("password123", 10),
       name: "Alexey Kuzmichev",
+      username: "alexey_kuzmichev",
       bio: "Создатель крутых схематиков",
+      role: "USER",
     },
   });
 
+  // Юзер 2
   const user2 = await prisma.user.create({
     data: {
       email: "ivan@literinth.com",
-      username: "ivan_redstone",
-      password: hashedPassword,
+      password: hashSync("password123", 10),
       name: "Ivan Petrov",
+      username: "ivan_redstone",
       bio: "Редстоун мастер",
+      role: "USER",
+
     },
   });
 
-  // Создание категорий
-  console.log("📁 Создание категорий...");
+  // Создание категорий с переводами
+  console.log("📁 Создание категорий с переводами...");
 
+  // 1. Враждебные мобы
   const hostileMobs = await prisma.category.create({
     data: {
-      name: "Враждебные мобы",
       slug: "hostile-mobs",
-      description: "Фермы враждебных мобов",
       order: 1,
+      visibleRu: true,
+      visibleEn: true,
+      translations: {
+        create: [
+          {
+            locale: "RU",
+            name: "Враждебные мобы",
+            description: "Фермы враждебных мобов",
+          },
+          {
+            locale: "EN",
+            name: "Hostile Mobs",
+            description: "Hostile mob farms",
+          },
+        ],
+      },
       subcategories: {
         create: [
-          { name: "Зомби", slug: "zombies", order: 1 },
-          { name: "Скелеты", slug: "skeletons", order: 2 },
-          { name: "Криперы", slug: "creepers", order: 3 },
+          {
+            slug: "zombies",
+            order: 1,
+            visibleRu: true,
+            visibleEn: true,
+            translations: {
+              create: [
+                { locale: "RU", name: "Зомби" },
+                { locale: "EN", name: "Zombies" },
+              ],
+            },
+          },
+          {
+            slug: "skeletons",
+            order: 2,
+            visibleRu: true,
+            visibleEn: true,
+            translations: {
+              create: [
+                { locale: "RU", name: "Скелеты" },
+                { locale: "EN", name: "Skeletons" },
+              ],
+            },
+          },
+          {
+            slug: "creepers",
+            order: 3,
+            visibleRu: true,
+            visibleEn: true,
+            translations: {
+              create: [
+                { locale: "RU", name: "Криперы" },
+                { locale: "EN", name: "Creepers" },
+              ],
+            },
+          },
         ],
       },
     },
   });
 
+  // 2. Нейтральные мобы
   const neutralMobs = await prisma.category.create({
     data: {
-      name: "Нейтральные мобы",
       slug: "neutral-mobs",
-      description: "Фермы нейтральных мобов",
       order: 2,
+      visibleRu: true,
+      visibleEn: true,
+      translations: {
+        create: [
+          {
+            locale: "RU",
+            name: "Нейтральные мобы",
+            description: "Фермы нейтральных мобов",
+          },
+          {
+            locale: "EN",
+            name: "Neutral Mobs",
+            description: "Neutral mob farms",
+          },
+        ],
+      },
       subcategories: {
         create: [
-          { name: "Железные големы", slug: "iron-golems", order: 1 },
-          { name: "Пчелы", slug: "bees", order: 2 },
+          {
+            slug: "iron-golems",
+            order: 1,
+            visibleRu: true,
+            visibleEn: true,
+            translations: {
+              create: [
+                { locale: "RU", name: "Железные големы" },
+                { locale: "EN", name: "Iron Golems" },
+              ],
+            },
+          },
+          {
+            slug: "bees",
+            order: 2,
+            visibleRu: true,
+            visibleEn: true,
+            translations: {
+              create: [
+                { locale: "RU", name: "Пчелы" },
+                { locale: "EN", name: "Bees" },
+              ],
+            },
+          },
         ],
       },
     },
   });
 
+  // 3. Пассивные мобы
   const passiveMobs = await prisma.category.create({
     data: {
-      name: "Пассивные мобы",
       slug: "passive-mobs",
-      description: "Фермы пассивных мобов",
       order: 3,
+      visibleRu: true,
+      visibleEn: true,
+      translations: {
+        create: [
+          {
+            locale: "RU",
+            name: "Пассивные мобы",
+            description: "Фермы пассивных мобов",
+          },
+          {
+            locale: "EN",
+            name: "Passive Mobs",
+            description: "Passive mob farms",
+          },
+        ],
+      },
       subcategories: {
         create: [
-          { name: "Коровы", slug: "cows", order: 1 },
-          { name: "Курицы", slug: "chickens", order: 2 },
-          { name: "Овцы", slug: "sheep", order: 3 },
+          {
+            slug: "cows",
+            order: 1,
+            visibleRu: true,
+            visibleEn: true,
+            translations: {
+              create: [
+                { locale: "RU", name: "Коровы" },
+                { locale: "EN", name: "Cows" },
+              ],
+            },
+          },
+          {
+            slug: "chickens",
+            order: 2,
+            visibleRu: true,
+            visibleEn: true,
+            translations: {
+              create: [
+                { locale: "RU", name: "Курицы" },
+                { locale: "EN", name: "Chickens" },
+              ],
+            },
+          },
+          {
+            slug: "sheep",
+            order: 3,
+            visibleRu: true,
+            visibleEn: true,
+            translations: {
+              create: [
+                { locale: "RU", name: "Овцы" },
+                { locale: "EN", name: "Sheep" },
+              ],
+            },
+          },
         ],
       },
     },
   });
 
+  // 4. Агрокультуры
   const agriculture = await prisma.category.create({
     data: {
-      name: "Агрокультуры",
       slug: "agriculture",
-      description: "Фермы растений и грибов",
       order: 4,
+      visibleRu: true,
+      visibleEn: true,
+      translations: {
+        create: [
+          {
+            locale: "RU",
+            name: "Агрокультуры",
+            description: "Фермы растений и грибов",
+          },
+          {
+            locale: "EN",
+            name: "Agriculture",
+            description: "Plant and mushroom farms",
+          },
+        ],
+      },
       subcategories: {
         create: [
-          { name: "Пшеница", slug: "wheat", order: 1 },
-          { name: "Морковь", slug: "carrots", order: 2 },
-          { name: "Картофель", slug: "potatoes", order: 3 },
-          { name: "Тыквы", slug: "pumpkins", order: 4 },
-          { name: "Арбузы", slug: "melons", order: 5 },
+          {
+            slug: "wheat",
+            order: 1,
+            visibleRu: true,
+            visibleEn: true,
+            translations: {
+              create: [
+                { locale: "RU", name: "Пшеница" },
+                { locale: "EN", name: "Wheat" },
+              ],
+            },
+          },
+          {
+            slug: "carrots",
+            order: 2,
+            visibleRu: true,
+            visibleEn: true,
+            translations: {
+              create: [
+                { locale: "RU", name: "Морковь" },
+                { locale: "EN", name: "Carrots" },
+              ],
+            },
+          },
+          {
+            slug: "pumpkins",
+            order: 3,
+            visibleRu: true,
+            visibleEn: true,
+            translations: {
+              create: [
+                { locale: "RU", name: "Тыквы" },
+                { locale: "EN", name: "Pumpkins" },
+              ],
+            },
+          },
         ],
       },
     },
   });
 
-  const blocksItems = await prisma.category.create({
-    data: {
-      name: "Блоки и предметы",
-      slug: "blocks-items",
-      description: "Фермы блоков и предметов",
-      order: 5,
-      subcategories: {
-        create: [
-          { name: "Булыжник", slug: "cobblestone", order: 1 },
-          { name: "Обсидиан", slug: "obsidian", order: 2 },
-          { name: "Базальт", slug: "basalt", order: 3 },
-        ],
-      },
-    },
-  });
-
+  // 5. Обработка предметов
   const itemProcessing = await prisma.category.create({
     data: {
-      name: "Обработка предметов",
       slug: "item-processing",
-      description: "Сортировки, хранилища, транспорт",
-      order: 6,
+      order: 5,
+      visibleRu: true,
+      visibleEn: true,
+      translations: {
+        create: [
+          {
+            locale: "RU",
+            name: "Обработка предметов",
+            description: "Сортировщики и хранилища",
+          },
+          {
+            locale: "EN",
+            name: "Item Processing",
+            description: "Sorters and storage",
+          },
+        ],
+      },
       subcategories: {
         create: [
-          { name: "Сортировки", slug: "sorters", order: 1 },
-          { name: "Хранилища", slug: "storage", order: 2 },
-          { name: "Транспорт", slug: "transport", order: 3 },
+          {
+            slug: "sorters",
+            order: 1,
+            visibleRu: true,
+            visibleEn: true,
+            translations: {
+              create: [
+                { locale: "RU", name: "Сортировщики" },
+                { locale: "EN", name: "Sorters" },
+              ],
+            },
+          },
         ],
       },
     },
   });
 
-  const infrastructure = await prisma.category.create({
-    data: {
-      name: "Инфраструктура",
-      slug: "infrastructure",
-      description: "Дороги, базы, города",
-      order: 7,
-      subcategories: {
-        create: [
-          { name: "Дороги", slug: "roads", order: 1 },
-          { name: "Базы", slug: "bases", order: 2 },
-          { name: "Города", slug: "cities", order: 3 },
-        ],
-      },
-    },
-  });
-
+  // 6. Щитпост
   const shitpost = await prisma.category.create({
     data: {
-      name: "Щитпост",
       slug: "shitpost",
-      description: "Мемные и экспериментальные схематики",
-      order: 8,
+      order: 6,
+      visibleRu: true,
+      visibleEn: true,
+      translations: {
+        create: [
+          {
+            locale: "RU",
+            name: "Щитпост",
+            description: "Мемные и экспериментальные схематики",
+          },
+          {
+            locale: "EN",
+            name: "Shitpost",
+            description: "Meme and experimental schematics",
+          },
+        ],
+      },
       subcategories: {
         create: [
-          { name: "Щитпост", slug: "shitpost-archive", order: 1 },
-          { name: "Мусорка", slug: "trash", order: 2 },
+          {
+            slug: "shitpost-archive",
+            order: 1,
+            visibleRu: true,
+            visibleEn: true,
+            translations: {
+              create: [
+                { locale: "RU", name: "Щитпост" },
+                { locale: "EN", name: "Shitpost Archive" },
+              ],
+            },
+          },
         ],
       },
     },
@@ -181,39 +398,109 @@ async function main() {
     where: { slug: "sorters" },
   });
 
-  // Создание тегов
-  console.log("🏷️  Создание тегов...");
-  const tagsPechki = await prisma.tag.create({
-    data: { name: "Печки", slug: "pechki" },
-  });
-  const tagsRedstone = await prisma.tag.create({
-    data: { name: "Редстоун", slug: "redstone" },
-  });
-  const tagsLitematica = await prisma.tag.create({
-    data: { name: "Лайтматика", slug: "litematica" },
-  });
-  const tagsShitpost = await prisma.tag.create({
-    data: { name: "Щитпост", slug: "shitpost" },
-  });
-  const tagsFarms = await prisma.tag.create({
-    data: { name: "Фермы", slug: "farms" },
-  });
-  const tagsEfficient = await prisma.tag.create({
-    data: { name: "Эффективные", slug: "efficient" },
+  const pumpkins = await prisma.subcategory.findFirst({
+    where: { slug: "pumpkins" },
   });
 
-  // Создание схематиков
-  console.log("📦 Создание схематиков...");
+  // Создание тегов с переводами
+  console.log("🏷️  Создание тегов с переводами...");
+  const tagPechki = await prisma.tag.create({
+    data: {
+      slug: "pechki",
+      translations: {
+        create: [
+          { locale: "RU", name: "Печки" },
+          { locale: "EN", name: "Furnaces" },
+        ],
+      },
+    },
+  });
+
+  const tagRedstone = await prisma.tag.create({
+    data: {
+      slug: "redstone",
+      translations: {
+        create: [
+          { locale: "RU", name: "Редстоун" },
+          { locale: "EN", name: "Redstone" },
+        ],
+      },
+    },
+  });
+
+  const tagLitematica = await prisma.tag.create({
+    data: {
+      slug: "litematica",
+      translations: {
+        create: [
+          { locale: "RU", name: "Лайтматика" },
+          { locale: "EN", name: "Litematica" },
+        ],
+      },
+    },
+  });
+
+  const tagShitpost = await prisma.tag.create({
+    data: {
+      slug: "shitpost",
+      translations: {
+        create: [
+          { locale: "RU", name: "Щитпост" },
+          { locale: "EN", name: "Shitpost" },
+        ],
+      },
+    },
+  });
+
+  const tagFarms = await prisma.tag.create({
+    data: {
+      slug: "farms",
+      translations: {
+        create: [
+          { locale: "RU", name: "Фермы" },
+          { locale: "EN", name: "Farms" },
+        ],
+      },
+    },
+  });
+
+  const tagEfficient = await prisma.tag.create({
+    data: {
+      slug: "efficient",
+      translations: {
+        create: [
+          { locale: "RU", name: "Эффективные" },
+          { locale: "EN", name: "Efficient" },
+        ],
+      },
+    },
+  });
+
+  // Создание схематиков с переводами
+  console.log("📦 Создание схематиков с переводами...");
 
   const schematics = [];
 
   for (let i = 1; i <= 12; i++) {
     const schematic = await prisma.schematic.create({
       data: {
-        title: `Furnace inferno ${10000 + i * 1000}`,
         slug: `furnace-inferno-${10000 + i * 1000}`,
-        description: "Мега супер крутая печка с файлваем и автоматической загрузкой",
-        content: `# Полное описание схематика
+        authorId: i % 2 === 0 ? user1.id : user2.id,
+        categoryId: shitpost.id,
+        subcategoryId: shitpostArchive?.id,
+        downloads: Math.floor(Math.random() * 1000000),
+        views: Math.floor(Math.random() * 5000000),
+        published: true,
+        visibleRu: true,
+        visibleEn: true,
+        translations: {
+          create: [
+            {
+              locale: "RU",
+              title: `Furnace inferno ${10000 + i * 1000}`,
+              description:
+                "Мега супер крутая печка с файлваем и автоматической загрузкой",
+              content: `# Полное описание схематика
         
 Это экспериментальный дизайн печки с невероятной производительностью!
 
@@ -221,25 +508,31 @@ async function main() {
 - Автоматическая загрузка топлива
 - Сортировка готовой продукции
 - Компактный дизайн
-- Работает в любых условиях
+- Работает в любых условиях`,
+            },
+            {
+              locale: "EN",
+              title: `Furnace Inferno ${10000 + i * 1000}`,
+              description:
+                "Mega super cool furnace with flywheels and automatic loading",
+              content: `# Full schematic description
+        
+This is an experimental furnace design with incredible performance!
 
-## Требования:
-- Редстоун
-- Хопперы
-- Печки
-- Немного терпения`,
-        authorId: i % 2 === 0 ? user1.id : user2.id,
-        categoryId: shitpost.id,
-        subcategoryId: shitpostArchive?.id,
-        downloads: Math.floor(Math.random() * 1000000),
-        views: Math.floor(Math.random() * 5000000),
-        published: true,
+## Features:
+- Automatic fuel loading
+- Finished product sorting
+- Compact design
+- Works in any conditions`,
+            },
+          ],
+        },
         tags: {
           create: [
-            { tag: { connect: { id: tagsPechki.id } } },
-            { tag: { connect: { id: tagsRedstone.id } } },
-            { tag: { connect: { id: tagsLitematica.id } } },
-            { tag: { connect: { id: tagsShitpost.id } } },
+            { tag: { connect: { id: tagPechki.id } } },
+            { tag: { connect: { id: tagRedstone.id } } },
+            { tag: { connect: { id: tagLitematica.id } } },
+            { tag: { connect: { id: tagShitpost.id } } },
           ],
         },
       },
@@ -247,23 +540,38 @@ async function main() {
     schematics.push(schematic);
   }
 
-  // Добавляем ещё немного разнообразных схематиков
+  // Добавляем ещё разнообразные схематики
   await prisma.schematic.create({
     data: {
-      title: "Сортировка предметов 64x",
       slug: "item-sorter-64x",
-      description: "Универсальная сортировка на 64 типа предметов",
-      content: "Полная инструкция по постройке сортировки...",
       authorId: user2.id,
       categoryId: itemProcessing.id,
       subcategoryId: sorters?.id,
       downloads: 450000,
       views: 1200000,
       published: true,
+      visibleRu: true,
+      visibleEn: true,
+      translations: {
+        create: [
+          {
+            locale: "RU",
+            title: "Сортировка предметов 64x",
+            description: "Универсальная сортировка на 64 типа предметов",
+            content: "Полная инструкция по постройке сортировки...",
+          },
+          {
+            locale: "EN",
+            title: "Item Sorter 64x",
+            description: "Universal sorter for 64 item types",
+            content: "Full building instructions...",
+          },
+        ],
+      },
       tags: {
         create: [
-          { tag: { connect: { id: tagsRedstone.id } } },
-          { tag: { connect: { id: tagsEfficient.id } } },
+          { tag: { connect: { id: tagRedstone.id } } },
+          { tag: { connect: { id: tagEfficient.id } } },
         ],
       },
     },
@@ -271,19 +579,35 @@ async function main() {
 
   await prisma.schematic.create({
     data: {
-      title: "Автоматическая ферма тыкв",
       slug: "auto-pumpkin-farm",
-      description: "Полностью автоматическая ферма тыкв с обсервером",
-      content: "Инструкция по постройке фермы...",
       authorId: user1.id,
       categoryId: agriculture.id,
+      subcategoryId: pumpkins?.id,
       downloads: 780000,
       views: 2100000,
       published: true,
+      visibleRu: true,
+      visibleEn: true,
+      translations: {
+        create: [
+          {
+            locale: "RU",
+            title: "Автоматическая ферма тыкв",
+            description: "Полностью автоматическая ферма тыкв с обсервером",
+            content: "Инструкция по постройке фермы...",
+          },
+          {
+            locale: "EN",
+            title: "Automatic Pumpkin Farm",
+            description: "Fully automatic pumpkin farm with observer",
+            content: "Farm building instructions...",
+          },
+        ],
+      },
       tags: {
         create: [
-          { tag: { connect: { id: tagsFarms.id } } },
-          { tag: { connect: { id: tagsEfficient.id } } },
+          { tag: { connect: { id: tagFarms.id } } },
+          { tag: { connect: { id: tagEfficient.id } } },
         ],
       },
     },
@@ -303,19 +627,27 @@ async function main() {
   console.log("✅ База данных успешно заполнена!");
   console.log(`
 📊 Статистика:
-- Пользователей: 2
-- Категорий: 8
+- Пользователей: 3 (1 админ + 2 юзера)
+- Категорий: 6
 - Подкатегорий: ${await prisma.subcategory.count()}
 - Схематиков: ${await prisma.schematic.count()}
 - Тегов: ${await prisma.tag.count()}
 - Лайков: ${await prisma.schematicLike.count()}
 
 🔐 Тестовые пользователи:
+
+АДМИН:
+Email: admin@literinth.com
+Password: password123
+
+ЮЗЕРЫ:
 Email: alexey@literinth.com
 Password: password123
 
 Email: ivan@literinth.com
 Password: password123
+
+🌍 Все данные созданы с переводами RU/EN
   `);
 }
 

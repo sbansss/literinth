@@ -7,18 +7,28 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum Locale {
+  RU
+  EN
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
-  username  String   @unique
+  username  String?   @unique
   password  String
   name      String?
   avatar    String?
   bio       String?
+  role      UserRole @default(USER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Связи
   schematics Schematic[]
   likes      SchematicLike[]
   sessions   Session[]
@@ -27,7 +37,6 @@ model User {
   @@map("users")
 }
 
-// Модель для Better Auth - нужна для OAuth провайдеров
 model Account {
   id                String   @id @default(cuid())
   userId            String
@@ -59,45 +68,75 @@ model Session {
   @@map("sessions")
 }
 
+// Категории теперь с i18n
 model Category {
   id            String   @id @default(cuid())
-  name          String
   slug          String   @unique
-  description   String?
   icon          String?
   order         Int      @default(0)
+  visibleRu     Boolean  @default(true)
+  visibleEn     Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  translations  CategoryTranslation[]
   subcategories Subcategory[]
   schematics    Schematic[]
 
   @@map("categories")
 }
 
-model Subcategory {
+model CategoryTranslation {
   id          String   @id @default(cuid())
   categoryId  String
+  locale      Locale
   name        String
-  slug        String
   description String?
-  order       Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  category   Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  schematics Schematic[]
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, locale])
+  @@map("category_translations")
+}
+
+model Subcategory {
+  id         String   @id @default(cuid())
+  categoryId String
+  slug       String
+  order      Int      @default(0)
+  visibleRu  Boolean  @default(true)
+  visibleEn  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  category     Category                  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  translations SubcategoryTranslation[]
+  schematics   Schematic[]
 
   @@unique([categoryId, slug])
   @@map("subcategories")
 }
 
+model SubcategoryTranslation {
+  id            String   @id @default(cuid())
+  subcategoryId String
+  locale        Locale
+  name          String
+  description   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  subcategory Subcategory @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+
+  @@unique([subcategoryId, locale])
+  @@map("subcategory_translations")
+}
+
 model Schematic {
   id            String   @id @default(cuid())
-  title         String
   slug          String   @unique
-  description   String
-  content       String?  @db.Text
   imageUrl      String?
   fileUrl       String?
   authorId      String
@@ -106,28 +145,60 @@ model Schematic {
   downloads     Int      @default(0)
   views         Int      @default(0)
   published     Boolean  @default(true)
+  visibleRu     Boolean  @default(true)
+  visibleEn     Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  // Связи
-  author       User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  category     Category        @relation(fields: [categoryId], references: [id])
-  subcategory  Subcategory?    @relation(fields: [subcategoryId], references: [id])
+  author       User                   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category     Category               @relation(fields: [categoryId], references: [id])
+  subcategory  Subcategory?           @relation(fields: [subcategoryId], references: [id])
+  translations SchematicTranslation[]
   tags         SchematicTag[]
   likes        SchematicLike[]
 
   @@map("schematics")
 }
 
+model SchematicTranslation {
+  id          String   @id @default(cuid())
+  schematicId String
+  locale      Locale
+  title       String
+  description String
+  content     String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  schematic Schematic @relation(fields: [schematicId], references: [id], onDelete: Cascade)
+
+  @@unique([schematicId, locale])
+  @@map("schematic_translations")
+}
+
 model Tag {
   id        String   @id @default(cuid())
-  name      String
   slug      String   @unique
   createdAt DateTime @default(now())
 
-  schematics SchematicTag[]
+  translations TagTranslation[]
+  schematics   SchematicTag[]
 
   @@map("tags")
+}
+
+model TagTranslation {
+  id        String   @id @default(cuid())
+  tagId     String
+  locale    Locale
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([tagId, locale])
+  @@map("tag_translations")
 }
 
 model SchematicTag {
